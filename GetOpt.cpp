@@ -1,5 +1,5 @@
 //--------------------------------------------------------------------
-// $Id: GetOpt.cpp,v 0.6 2000/12/21 05:16:19 Madsen Exp $
+// $Id: GetOpt.cpp 4570 2004-07-05 21:57:23Z cjm $
 //--------------------------------------------------------------------
 //
 // Free GetOpt
@@ -231,18 +231,18 @@ bool GetOpt::isString(GetOpt* getopt, const Option* option,
 //     as long as the GetOpt object does.
 
 GetOpt::GetOpt(const Option* aList)
-: optionList(aList),
-  argc(0),
-  argi(0), chari(0),
-  argv(NULL),
+: error(false),
 #ifdef GETOPT_NO_STDIO
   errorOutput(NULL),               // No stdio, can't print errors
 #else
   errorOutput(GetOpt::printError), // Print error messages to stderr
 #endif
-  error(false),
-  normalOnly(false),
-  optionStart("-")
+  optionStart("-"),
+  optionList(aList),
+  argc(0),
+  argi(0), chari(0),
+  argv(NULL),
+  normalOnly(false)
 {
   checkReturnAll();
 } // end GetOpt::GetOpt
