@@ -1,5 +1,5 @@
 //--------------------------------------------------------------------
-// $Id: GetOpt.hpp,v 0.3 2000/12/16 20:28:24 Madsen Exp $
+// $Id: GetOpt.hpp,v 0.4 2000/12/17 18:06:48 Madsen Exp $
 //--------------------------------------------------------------------
 //
 //   Free GetOpt
@@ -52,12 +52,15 @@ class GetOpt
  public:
   explicit GetOpt(const Option* aList);
   void  init(int theArgc, const char** theArgv);
+  int   currentArg() const { return argi; };
   bool  nextOption(const Option*& option, const char*& asEntered);
   int   process(int theArgc, const char** theArgv);
   void  reportError(const char* option, const char* message);
 
   // Standard callback functions:
+#ifndef GETOPT_NO_STDIO
   static void  printError(const char* option, const char* message);
+#endif
   static bool  isFloat(GetOpt* getopt, const Option* option,
                        const char* asEntered,
                        Connection connected, const char* argument,

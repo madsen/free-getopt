@@ -1,5 +1,5 @@
 //--------------------------------------------------------------------
-// $Id: GetOpt.cpp,v 0.3 2000/12/15 22:01:38 Madsen Exp $
+// $Id: GetOpt.cpp,v 0.4 2000/12/17 18:08:40 Madsen Exp $
 //--------------------------------------------------------------------
 //
 // Free GetOpt
@@ -21,13 +21,14 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 //
-// As a special exception, if you link Free GetOpt with other files
-// to produce an executable, this does not by itself cause the
-// resulting executable to be covered by the GNU General Public License.
-// Your use of that executable is in no way restricted on account of
-// linking the Free GetOpt code into it.  However, if you link a
-// modified version of Free GetOpt to your executable, you must make
-// your modifications to Free GetOpt publicly available.
+// As a special exception, if you link Free GetOpt with other files to
+// produce an executable, this does not by itself cause the resulting
+// executable to be covered by the GNU General Public License.  Your
+// use of that executable is in no way restricted on account of linking
+// the Free GetOpt code into it.  However, if you link a modified
+// version of Free GetOpt to your executable and distribute the
+// executable, you must make your modifications to Free GetOpt publicly
+// available as machine-readable source code.
 //
 // This exception does not however invalidate any other reasons why
 // the executable file might be covered by the GNU General Public License.
@@ -44,7 +45,10 @@
 // If you do not wish that, delete this exception notice.
 //--------------------------------------------------------------------
 
+#ifndef GETOPT_NO_STDIO
 #include <stdio.h>
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -231,7 +235,11 @@ GetOpt::GetOpt(const Option* aList)
   argc(0),
   argi(0), chari(0),
   argv(NULL),
-  errorOutput(GetOpt::printError),
+#ifdef GETOPT_NO_STDIO
+  errorOutput(NULL),               // No stdio, can't print errors
+#else
+  errorOutput(GetOpt::printError), // Print error messages to stderr
+#endif
   error(false),
   normalOnly(false),
   optionStart("-")
@@ -252,12 +260,14 @@ GetOpt::GetOpt(const Option* aList)
 //   option:   The option the user typed
 //   message:  The error message to display
 
+#ifndef GETOPT_NO_STDIO
 void GetOpt::printError(const char* option, const char* message)
 {
   fputs(option, stderr);
   fputs(message, stderr);
   putc('\n', stderr);
 } // end GetOpt::printError
+#endif // not GETOPT_NO_STDIO
 
 //--------------------------------------------------------------------
 // Prepare to process a command line:
@@ -283,7 +293,7 @@ void GetOpt::init(int theArgc, const char** theArgv)
 
   const Option* op = optionList;
 
-  while (op->shortName || op->longName || op->function) {
+  while (op->shortName || op->longName) {
     if (op->found)
       *(op->found) = notFound;
     ++op;
@@ -297,13 +307,15 @@ void GetOpt::checkReturnAll()
 {
   const Option* op = optionList;
 
-  while (op->shortName || op->longName)
+  while (op->shortName || op->longName) {
+    if (op->longName && !*(op->longName)) {
+      returningAll = op;
+      return;
+    }
     ++op;
+  }
 
-  if (op->function)
-    returningAll = op;
-  else
-    returningAll = NULL;
+  returningAll = NULL;
 } // end GetOpt::checkReturnAll
 
 //--------------------------------------------------------------------
@@ -328,7 +340,7 @@ const GetOpt::Option* GetOpt::findLongOption(const char* option)
   const Option*  possibleMatch = NULL;
   bool  ambiguous = false;
 
-  while (op->shortName || op->longName || op->function) {
+  while (op->shortName || op->longName) {
     if (op->longName) {
       bool partial = false;
       const char* u = option;
@@ -381,7 +393,7 @@ const GetOpt::Option* GetOpt::findShortOption(char option) const
 {
   const Option* op = optionList;
 
-  while (op->shortName || op->longName || op->function) {
+  while (op->shortName || op->longName) {
     if (op->shortName == option)
       return op;
     ++op;
@@ -600,7 +612,8 @@ void GetOpt::reportError(const char* option, const char* message)
 // Returns:
 //   The index (into theArgv) of the first argument that was not
 //   processed by GetOpt.  If this is >= theArgc, then all arguments
-//   were processed.
+//   were processed.  (This is the same value that would be returned
+//   by currentArg().)
 
 int GetOpt::process(int theArgc, const char** theArgv)
 {
