@@ -1,5 +1,5 @@
 //--------------------------------------------------------------------
-// $Id: GetOpt.hpp,v 0.4 2000/12/17 18:06:48 Madsen Exp $
+// $Id: GetOpt.hpp,v 0.5 2000/12/20 18:12:33 Madsen Exp $
 //--------------------------------------------------------------------
 //
 //   Free GetOpt
@@ -17,9 +17,10 @@ class GetOpt
 {
  public:
   struct Option;
-  enum Connection { nextArg, withEquals, adjacent };
-  enum Found      { notFound, noArg, withArg      };
-  enum Type       { optArg, optLong, optShort     };
+  enum Connection { nextArg, withEquals, adjacent     };
+  enum Flag       { needArg = 0x01, repeatable = 0x02 };
+  enum Found      { notFound, noArg, withArg          };
+  enum Type       { optArg, optLong, optShort         };
   typedef bool (ArgFunc)(GetOpt* getopt, const Option* option,
                          const char* asEntered,
                          Connection connected, const char* argument,
@@ -31,8 +32,8 @@ class GetOpt
     char         shortName;
     const char*  longName;
     Found*       found;
+    unsigned     flag;
     ArgFunc*     function;
-    bool         requireArg;
     void*        data;
   }; // end GetOpt::Option
 

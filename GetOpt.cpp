@@ -1,5 +1,5 @@
 //--------------------------------------------------------------------
-// $Id: GetOpt.cpp,v 0.4 2000/12/17 18:08:40 Madsen Exp $
+// $Id: GetOpt.cpp,v 0.5 2000/12/20 18:15:13 Madsen Exp $
 //--------------------------------------------------------------------
 //
 // Free GetOpt
@@ -120,7 +120,7 @@ bool GetOpt::isFloat(GetOpt* getopt, const Option* option,
                      int* usedChars)
 {
   if (!argument ||
-      ((connected == nextArg) && !option->requireArg))
+      ((connected == nextArg) && !(option->flag & GetOpt::needArg)))
     return false; // No argument or non-connected optional argument
 
   char*  end;
@@ -145,7 +145,7 @@ bool GetOpt::isLong(GetOpt* getopt, const Option* option,
                    int* usedChars)
 {
   if (!argument ||
-      ((connected == nextArg) && !option->requireArg))
+      ((connected == nextArg) && !(option->flag & GetOpt::needArg)))
     return false; // No argument or non-connected optional argument
 
   char*  end;
@@ -170,7 +170,7 @@ bool GetOpt::isString(GetOpt* getopt, const Option* option,
                    int* usedChars)
 {
   if (!argument ||
-      ((connected == nextArg) && !option->requireArg))
+      ((connected == nextArg) && !(option->flag & GetOpt::needArg)))
     return false; // No argument or non-connected optional argument
 
   if (option->data)
@@ -519,8 +519,13 @@ bool GetOpt::nextOption(const Option*& option, const char*& asEntered)
     return false;
   }
 
-  if (option->found)
-    *(option->found) = noArg;
+  if (option->found && *option->found &&
+      !(option->flag & GetOpt::repeatable)) {
+    reportError(asEntered, " cannot be repeated");
+    return false;
+  }
+
+  Found  found = noArg;
 
   if (option->function) {
     int   usedChars = -1;
@@ -541,7 +546,7 @@ bool GetOpt::nextOption(const Option*& option, const char*& asEntered)
         connect = withEquals;
       } else if (argi+1 < argc)
         arg = argv[argi+1];
-      else if (option->requireArg) {
+      else if (option->flag & GetOpt::needArg) {
         reportError(asEntered, " requires an argument");
         return false;
       } else
@@ -550,8 +555,7 @@ bool GetOpt::nextOption(const Option*& option, const char*& asEntered)
 
     if ((*(option->function))(this, option, asEntered, connect, arg,
                               mayUseChars)) {
-      if (option->found)
-        *(option->found) = withArg;
+      found = withArg;
       if (usedChars >= 0)
         chari += usedChars;
       else {
@@ -560,11 +564,14 @@ bool GetOpt::nextOption(const Option*& option, const char*& asEntered)
           ++argi;
       }
     } // end if found option
-    else if (option->requireArg && !error) {
+    else if ((option->flag & GetOpt::needArg) && !error) {
       reportError(asEntered, " requires an argument");
       return false;
     }
   } // end if option has function to call
+
+  if (option->found)
+    *(option->found) = found;
 
   return true;
 } // end GetOpt::nextOption
