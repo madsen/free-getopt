@@ -1,5 +1,5 @@
 //--------------------------------------------------------------------
-// $Id: GetOpt.cpp,v 0.5 2000/12/20 18:15:13 Madsen Exp $
+// $Id: GetOpt.cpp,v 0.6 2000/12/21 05:16:19 Madsen Exp $
 //--------------------------------------------------------------------
 //
 // Free GetOpt
@@ -415,13 +415,17 @@ const GetOpt::Option* GetOpt::findShortOption(char option) const
 //     optArg:    Normal argument (not an option)
 //     optLong:   A long option
 //     optShort:  A single-character option
+//   posArg:  The index of a possible argument for this option
+//            0 means use argi+1
 //
 // Returns:
 //   true:   Found an option or normal argument to be returned
 //   false:  No more arguments (option & type are undefined in this case)
 
-bool GetOpt::nextOption(const char*& option, Type& type)
+bool GetOpt::nextOption(const char*& option, Type& type, int& posArg)
 {
+  posArg = 0;
+
   if (chari) {
     if (argv[argi][++chari]) {
       option = argv[argi] + chari;
@@ -455,6 +459,7 @@ bool GetOpt::nextOption(const char*& option, Type& type)
       for (int i = argi+1; i < argc; ++i) {
         if (argv[i][0] && strchr(optionStart, argv[i][0])) {
           // We found another option, move it before the other args:
+          posArg = i + 1;
           arg = argv[i];
           while (--i >= argi)
             argv[i+1] = argv[i];
@@ -490,9 +495,10 @@ bool GetOpt::nextOption(const Option*& option, const char*& asEntered)
 {
   const char* arg;
   Type        type;
+  int         posArg;
 
  nextArg:
-  if (!nextOption(arg, type)) return false;
+  if (!nextOption(arg, type, posArg)) return false;
 
   if (type == optLong && !*arg) {
     normalOnly = true;
@@ -532,6 +538,8 @@ bool GetOpt::nextOption(const Option*& option, const char*& asEntered)
     int*  mayUseChars = NULL;
     Connection  connect = nextArg;
 
+    if (!posArg) posArg = argi + 1;
+
     if (type != optArg) {
       if ((type == optShort) && argv[argi][chari+1]) {
         mayUseChars = &usedChars;
@@ -544,8 +552,8 @@ bool GetOpt::nextOption(const Option*& option, const char*& asEntered)
       } else if ((type == optLong) && (arg = strchr(arg, '='))) {
         ++arg;                    // Skip over equals
         connect = withEquals;
-      } else if (argi+1 < argc)
-        arg = argv[argi+1];
+      } else if (posArg < argc)
+        arg = argv[posArg];
       else if (option->flag & GetOpt::needArg) {
         reportError(asEntered, " requires an argument");
         return false;
@@ -560,9 +568,14 @@ bool GetOpt::nextOption(const Option*& option, const char*& asEntered)
         chari += usedChars;
       else {
         chari = 0;
-        if ((type != optArg) && (connect == nextArg))
+        if ((type != optArg) && (connect == nextArg) && arg) {
           ++argi;
-      }
+          // If we moved the option, we need to move the argument:
+          while (--posArg >= argi)
+            argv[posArg+1] = argv[posArg];
+          argv[argi] = arg;
+        } // end if used next argument
+      } // end else didn't use just some of the characters in a bundle
     } // end if found option
     else if ((option->flag & GetOpt::needArg) && !error) {
       reportError(asEntered, " requires an argument");

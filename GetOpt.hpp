@@ -1,5 +1,5 @@
 //--------------------------------------------------------------------
-// $Id: GetOpt.hpp,v 0.5 2000/12/20 18:12:33 Madsen Exp $
+// $Id: GetOpt.hpp,v 0.6 2000/12/21 05:14:13 Madsen Exp $
 //--------------------------------------------------------------------
 //
 //   Free GetOpt
@@ -79,7 +79,7 @@ class GetOpt
   void  checkReturnAll();
   const Option*  findShortOption(char option) const;
   const Option*  findLongOption(const char* option);
-  bool  nextOption(const char*& option, Type& type);
+  bool  nextOption(const char*& option, Type& type, int& posArg);
 }; // end GetOpt
 
 #endif // INCLUDED_GETOPT_HPP
