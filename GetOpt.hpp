@@ -1,9 +1,10 @@
 //--------------------------------------------------------------------
-// $Id: GetOpt.hpp,v 0.2 2000/12/13 00:43:27 Madsen Exp $
+// $Id: GetOpt.hpp,v 0.3 2000/12/16 20:28:24 Madsen Exp $
 //--------------------------------------------------------------------
 //
 //   Free GetOpt
 //   Copyright 2000 by Christopher J. Madsen
+//   See GetOpt.cpp for license information
 //
 //   Process command line arguments
 //
@@ -57,11 +58,23 @@ class GetOpt
 
   // Standard callback functions:
   static void  printError(const char* option, const char* message);
+  static bool  isFloat(GetOpt* getopt, const Option* option,
+                       const char* asEntered,
+                       Connection connected, const char* argument,
+                       int* usedChars);
+  static bool  isLong(GetOpt* getopt, const Option* option,
+                      const char* asEntered,
+                      Connection connected, const char* argument,
+                      int* usedChars);
+  static bool  isString(GetOpt* getopt, const Option* option,
+                        const char* asEntered,
+                        Connection connected, const char* argument,
+                        int* usedChars);
 
  protected:
   void  checkReturnAll();
   const Option*  findShortOption(char option) const;
-  const Option*  findLongOption(const char* option) const;
+  const Option*  findLongOption(const char* option);
   bool  nextOption(const char*& option, Type& type);
 }; // end GetOpt
 
