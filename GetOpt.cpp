@@ -1,5 +1,5 @@
 //--------------------------------------------------------------------
-// $Id: GetOpt.cpp,v 0.1 2000/12/11 02:54:30 Madsen Exp $
+// $Id: GetOpt.cpp,v 0.2 2000/12/13 00:44:53 Madsen Exp $
 //--------------------------------------------------------------------
 //
 //   Free GetOpt
@@ -10,29 +10,51 @@
 //--------------------------------------------------------------------
 
 #include "GetOpt.hpp"
+#include <stdio.h>
 #include <string.h>
 
 static const char longOptionStart[] = "--";
 
+//--------------------------------------------------------------------
 GetOpt::GetOpt(const Option* aList)
 : optionList(aList),
   argc(0),
   argi(0), chari(0),
   argv(NULL),
+  errorOutput(GetOpt::printError),
+  error(false),
   normalOnly(false),
   optionStart("-")
 {
   checkReturnAll();
 } // end GetOpt::GetOpt
 
+//--------------------------------------------------------------------
+void GetOpt::printError(const char* option, const char* message)
+{
+  fputs(option, stderr);
+  fputs(message, stderr);
+  putc('\n', stderr);
+} // end GetOpt::printError
+
+//--------------------------------------------------------------------
 void GetOpt::init(int theArgc, const char** theArgv)
 {
   argc = theArgc;
   argv = theArgv;
   argi = chari = 0;
-  normalOnly = false;
+  error = normalOnly = false;
+
+  const Option* op = optionList;
+
+  while (op->shortName || op->longName || op->function) {
+    if (op->found)
+      *(op->found) = notFound;
+    ++op;
+  }
 } // end GetOpt::init
 
+//--------------------------------------------------------------------
 void GetOpt::checkReturnAll()
 {
   const Option* op = optionList;
@@ -40,7 +62,7 @@ void GetOpt::checkReturnAll()
   while (op->shortName || op->longName)
     ++op;
 
-  if (op->argument)
+  if (op->function)
     returningAll = op;
   else
     returningAll = NULL;
@@ -52,7 +74,7 @@ const GetOpt::Option* GetOpt::findLongOption(const char* option) const
   const Option* op = optionList;
   // FIXME add abbreviations and arguments
 
-  while (op->shortName || op->longName || op->argument) {
+  while (op->shortName || op->longName || op->function) {
     if (!stricmp(op->longName, option))
       return op;                // Found exact match
     ++op;
@@ -66,7 +88,7 @@ const GetOpt::Option* GetOpt::findShortOption(char option) const
 {
   const Option* op = optionList;
 
-  while (op->shortName || op->longName || op->argument) {
+  while (op->shortName || op->longName || op->function) {
     if (op->shortName == option)
       return op;
     ++op;
@@ -154,9 +176,16 @@ bool GetOpt::nextOption(const Option*& option, const char*& asEntered)
       option = findLongOption(arg);
   }
 
-  if (!option) return false;
+  if (!option) {
+    if ((type != optArg) && !error)
+      reportError(asEntered, " is not a recognized option");
+    return false;
+  }
 
-  if (option->argument) {
+  if (option->found)
+    *(option->found) = noArg;
+
+  if (option->function) {
     int   usedChars = 0;
     int*  mayUseChars = NULL;
     Connection  connect = nextArg;
@@ -175,12 +204,17 @@ bool GetOpt::nextOption(const Option*& option, const char*& asEntered)
         connect = withEquals;
       } else if (argi+1 < argc)
         arg = argv[argi+1];
-      else
+      else if (option->requireArg) {
+        reportError(asEntered, " requires an argument");
+        return false;
+      } else
         arg = NULL;
-    }
+    } // end if option (not normal argument)
 
-    if ((*(option->argument))(this, option, asEntered, connect, arg,
+    if ((*(option->function))(this, option, asEntered, connect, arg,
                               mayUseChars)) {
+      if (option->found)
+        *(option->found) = withArg;
       if (usedChars)
         chari += usedChars;
       else {
@@ -189,11 +223,24 @@ bool GetOpt::nextOption(const Option*& option, const char*& asEntered)
           ++argi;
       }
     } // end if found option
+    else if (option->requireArg && !error) {
+      reportError(asEntered, " requires an argument");
+      return false;
+    }
   } // end if option has function to call
 
   return true;
 } // end GetOpt::nextOption
 
+//--------------------------------------------------------------------
+void GetOpt::reportError(const char* option, const char* message)
+{
+  error = true;
+  if (errorOutput)
+    (*errorOutput)(option, message);
+} // end GetOpt::reportError
+
+//--------------------------------------------------------------------
 int GetOpt::process(int theArgc, const char** theArgv)
 {
   const Option* option;
@@ -205,12 +252,3 @@ int GetOpt::process(int theArgc, const char** theArgv)
 
   return argi;
 } // end GetOpt::process
-
-//--------------------------------------------------------------------
-bool GetOpt::isFlag(GetOpt* getopt, const Option* option,
-                      const char*, Connection, const char*, int*)
-{
-  *reinterpret_cast<bool*>(option->data) = option->flag;
-  return false;
-} // end GetOpt::isFlag
-

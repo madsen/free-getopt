@@ -1,5 +1,5 @@
 //--------------------------------------------------------------------
-// $Id: GetOpt.hpp,v 0.1 2000/12/11 02:54:57 Madsen Exp $
+// $Id: GetOpt.hpp,v 0.2 2000/12/13 00:43:27 Madsen Exp $
 //--------------------------------------------------------------------
 //
 //   Free GetOpt
@@ -17,20 +17,27 @@ class GetOpt
  public:
   struct Option;
   enum Connection { nextArg, withEquals, adjacent };
+  enum Found      { notFound, noArg, withArg      };
   enum Type       { optArg, optLong, optShort     };
   typedef bool (ArgFunc)(GetOpt* getopt, const Option* option,
                          const char* asEntered,
                          Connection connected, const char* argument,
                          int* usedChars);
+  typedef void (ErrorFunc)(const char* option, const char* message);
+
   struct Option
   {
     char         shortName;
     const char*  longName;
-    ArgFunc*     argument;
-    bool         flag;
+    Found*       found;
+    ArgFunc*     function;
+    bool         requireArg;
     void*        data;
-    const char*  description;
   }; // end GetOpt::Option
+
+  bool           error;
+  ErrorFunc*     errorOutput;
+  const char*    optionStart;
 
  protected:
   const Option*  optionList;
@@ -38,7 +45,6 @@ class GetOpt
   int            argi, chari;
   const char**   argv;
   bool           normalOnly;
-  const char*    optionStart;
   const Option*  returningAll;
   char           shortOptionBuf[3];
 
@@ -47,10 +53,10 @@ class GetOpt
   void  init(int theArgc, const char** theArgv);
   bool  nextOption(const Option*& option, const char*& asEntered);
   int   process(int theArgc, const char** theArgv);
+  void  reportError(const char* option, const char* message);
 
   // Standard callback functions:
-  static bool  isFlag(GetOpt* getopt, const Option* option,
-                      const char*, Connection, const char*, int*);
+  static void  printError(const char* option, const char* message);
 
  protected:
   void  checkReturnAll();
