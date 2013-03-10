@@ -1,8 +1,6 @@
 //--------------------------------------------------------------------
-// $Id: GetOpt.hpp 4570 2004-07-05 21:57:23Z cjm $
-//--------------------------------------------------------------------
+//   Free GetOpt 1.0
 //
-//   Free GetOpt
 //   Copyright 2000 by Christopher J. Madsen
 //   See GetOpt.cpp for license information
 //
